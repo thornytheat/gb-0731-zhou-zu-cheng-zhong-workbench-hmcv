@@ -5,9 +5,18 @@ from app.modules.m5_balance.thresholds import grade
 
 def balance(axes):
     results = []
-    counts = Counter({"pass": 0, "warn": 0, "severe": 0})
+    counts = Counter({"pass": 0, "warn": 0, "severe": 0, "blocked": 0})
     for axis in axes:
         left, right = axis["left"], axis["right"]
+        if axis.get("contended"):
+            # 争配未解决时偏载不得定级，只挂起展示。
+            counts["blocked"] += 1
+            results.append({
+                "id": axis["id"], "pass_id": axis["pass_id"], "level": "blocked",
+                "percent": None, "left_kg": left.kg, "right_kg": right.kg, "heavy": None,
+                "left_ref": left.trigger.source.ref, "right_ref": right.trigger.source.ref,
+            })
+            continue
         level, percent = grade(left.kg, right.kg)
         counts[level] += 1
         results.append({

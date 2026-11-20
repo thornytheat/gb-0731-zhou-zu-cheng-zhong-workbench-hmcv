@@ -21,6 +21,7 @@ def reconcile(source, passes, axes, isolated, duplicates, raw_count):
     results = []
     for pass_id, crossing in passes.items():
         items = by_pass[pass_id]
+        blocked = any(axis.get("contended") for axis in items)
         wheel_kg = sum((axis["total_kg"] for axis in items), Decimal("0.00"))
         ticket, code, refs = choose(book[pass_id])
         if bad_tickets[pass_id]:
@@ -34,6 +35,9 @@ def reconcile(source, passes, axes, isolated, duplicates, raw_count):
             ticket, code = None, "TICKET_TIME"
         difference = ticket.kg - wheel_kg if ticket else None
         codes = [] if code is None else [code]
+        if blocked:
+            # 争配未解决：差额再小也不能核平，且偏载已在 M5 挂起。
+            codes.append("AXLE_CONTENDED")
         if review[pass_id] or not items:
             codes.append("WHEELS_INCOMPLETE")
         if difference is not None and abs(difference) > TICKET_TOLERANCE:

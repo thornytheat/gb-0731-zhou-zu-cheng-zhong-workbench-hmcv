@@ -29,7 +29,7 @@ def test_full_flow_from_unarchived_preview_to_standalone_export(client, settings
     assert response.status_code == 201
     manifest = response.json()["manifest"]
     run_id = manifest["run_id"]
-    assert manifest["ledger"]["wheel_kg"] == "49590.01"
+    assert manifest["ledger"]["wheel_kg"] == "54490.01"
     assert manifest["files"]["triggers"]["sha256"] == hashlib.sha256(
         (settings.source_dir / "dirty-triggers.csv").read_bytes(),
     ).hexdigest()
@@ -47,7 +47,7 @@ def test_full_flow_from_unarchived_preview_to_standalone_export(client, settings
         issues = list(csv.DictReader(StringIO(bundle.read("触发复核.csv").decode("utf-8-sig"))))
         row = next(item for item in issues if item["原因码"] == "CAL_OVERLAP")
         assert (row["起始行"], row["关联证据"]) == ("23", "certificates.csv:4 / certificates.csv:5")
-        assert len(issues) == 30
+        assert len(issues) == 28
 
 
 def test_idempotent_post_reuses_manifest_and_results(client):
@@ -138,14 +138,14 @@ def test_archive_survives_app_restart_and_supports_export_without_sources(client
     with TestClient(create_app(settings)) as restarted:
         assert restarted.get(f"/api/batches/{run_id}").json()["manifest"] == manifest
         assert restarted.get(f"/api/batches/{run_id}/export").content == export
-        assert restarted.get(f"/api/axles?run_id={run_id}").json()["data"]["groups"] == 8
+        assert restarted.get(f"/api/axles?run_id={run_id}").json()["data"]["groups"] == 9
         assert restarted.post(f"/api/batches/{run_id}/rerun").json()["error"]["code"] == "SOURCE_MISSING"
 
 
 def test_independent_module_entrypoints_return_sample_evidence(client):
     expected = {
         "intake": ("raw", 50), "calibration": ("certificates", 4), "debounce": ("duplicates", 3),
-        "axles": ("groups", 8), "balance": ("rows", 11), "reconcile": ("rows", 7),
+        "axles": ("groups", 9), "balance": ("rows", 12), "reconcile": ("rows", 7),
     }
     for stage, (key, count) in expected.items():
         response = client.get(f"/api/{stage}?sample=dirty")

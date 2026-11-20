@@ -8,21 +8,28 @@ from app.modules.m4_axles.pair import match
 from app.modules.m4_axles.spacing import classify_spacing
 
 
-# TRAP-19
-def test_nearest_pair_would_invent_axle_when_candidates_conflict(dirty_result):
+# TRAP-19：整车证据取舍，贪心挑最近只会凭空造一轴，整车枚举得到两轴唯一最优。
+def test_whole_vehicle_evidence_recovers_two_axles_when_candidates_conflict(dirty_result):
     stage = dirty_result["axles"]
-    ambiguous = [item for item in stage["issues"] if item["code"] == "PAIR_AMBIGUOUS"]
-    assert {item["source"]["line"] for item in ambiguous} == {28, 29, 30}
+    contention = {item["pass_id"]: item for item in stage["contention"]}
+    decision = contention["0019"]
+    assert decision["status"] == "resolved"
     axes = [axis for axis in stage["axes"] if axis["pass_id"] == "0019"]
     assert [(item["left"]["trigger"]["id"], item["right"]["trigger"]["id"]) for item in axes] == [
+        ("0019-1L", "0019-1R"),
         ("0019-3L", "0019-3R"),
     ]
+    assert all(axis["status"] == "confirmed" and not axis["contended"] for axis in axes)
+    # 争配台账保留全部候选方案与被排除候选，供现场复核。
+    assert decision["candidate_plans"] >= 2
+    assert all(not issue["code"] == "PAIR_CONTENDED" for issue in stage["issues"])
 
 
 def test_left_without_right_goes_to_review_without_estimated_load(dirty_result):
     stage = dirty_result["axles"]
     missing = {item["source"]["cells"][0] for item in stage["issues"] if item["code"] == "PAIR_MISSING"}
-    assert missing == {"0012-3L", "0012-4L", "0031-1R"}
+    # 0019-2L 在整车最优两轴方案中落选，按缺证隔离且不估算轮载。
+    assert missing == {"0012-3L", "0012-4L", "0019-2L", "0031-1R"}
     assert len([row for row in stage["axes"] if row["pass_id"] == "0012"]) == 2
 
 

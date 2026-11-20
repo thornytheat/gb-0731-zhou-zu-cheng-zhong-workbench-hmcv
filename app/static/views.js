@@ -24,8 +24,8 @@ export function dateTime(value) {
 const col = (label, read, numeric = false) => ({label, read, numeric});
 const source = (obj) => obj.source.ref;
 const joined = (list) => list?.join(" / ");
-const labels = {pass: "正常", warn: "偏载", severe: "严重", matched: "已核平", review: "待复秤"};
-const styles = {pass: "ok", warn: "warn", severe: "bad", matched: "ok", review: "warn"};
+const labels = {pass: "正常", warn: "偏载", severe: "严重", blocked: "争配挂起", matched: "已核平", review: "待复秤"};
+const styles = {pass: "ok", warn: "warn", severe: "bad", blocked: "bad", matched: "ok", review: "warn"};
 const displayStatus = (level) => ({text: labels[level], level: styles[level]});
 
 const issueColumns = [
@@ -67,13 +67,20 @@ export function moduleViews(name, snapshot, history) {
     case "axles": return {summary: stage ? `${stage.axes.length} 轴 · ${stage.groups} 轴组` : "", views: [
       ["确认车轴", stage?.axes, [
         col("轴号", (r) => r.id), col("轴组", (r) => r.group), col("轴时刻", (r) => clock(r.time)),
+        col("状态", (r) => r.contended ? {text: "争配挂起", level: "bad"} : {text: "已确认", level: "ok"}),
         col("轴距 m", (r) => r.gap_m, true), col("右减左 ms", (r) => r.skew_ms, true),
         col("左轮 kg", (r) => r.left.kg, true), col("右轮 kg", (r) => r.right.kg, true),
         col("轴重 kg", (r) => r.total_kg, true), col("左轮证据", (r) => source(r.left.trigger)),
         col("右轮证据", (r) => source(r.right.trigger)),
+      ]], ["争配裁决", stage?.contention, [
+        col("车次", (r) => r.pass_id),
+        col("裁决", (r) => r.status === "blocked" ? {text: "未决挂起", level: "bad"} : {text: "唯一最优", level: "ok"}),
+        col("候选方案", (r) => r.candidate_plans, true),
+        col("采用配对", (r) => joined(r.chosen_pairs.map((pair) => pair.join(" / ")))),
+        col("排除候选", (r) => joined(r.excluded_refs)),
       ]], ["轴组隔离", stage?.issues, issueColumns],
     ]};
-    case "balance": return {summary: stage ? `${stage.counts.pass} 正常 · ${stage.counts.warn} 偏载 · ${stage.counts.severe} 严重` : "", views: [
+    case "balance": return {summary: stage ? `${stage.counts.pass} 正常 · ${stage.counts.warn} 偏载 · ${stage.counts.severe} 严重 · ${stage.counts.blocked ?? 0} 挂起` : "", views: [
       ["偏载结果", stage?.rows, [
         col("轴号", (r) => r.id), col("判级", (r) => displayStatus(r.level)),
         col("左轮 kg", (r) => r.left_kg, true), col("右轮 kg", (r) => r.right_kg, true),

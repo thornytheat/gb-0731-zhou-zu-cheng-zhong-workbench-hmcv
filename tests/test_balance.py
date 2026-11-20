@@ -28,15 +28,15 @@ def test_swapping_sides_preserves_grade():
 
 
 def test_clean_equal_wheels_have_no_heavy_side(clean_result):
-    assert clean_result["balance"]["counts"] == {"pass": 14, "warn": 0, "severe": 0}
+    assert clean_result["balance"]["counts"] == {"pass": 14, "warn": 0, "severe": 0, "blocked": 0}
     assert {(row["heavy"], row["percent"]) for row in clean_result["balance"]["rows"]} == {(None, "0.00")}
 
 
 def test_quarantined_wheels_never_participate_in_grading(dirty_result):
     stage = dirty_result["balance"]
-    assert stage["counts"] == {"pass": 9, "warn": 1, "severe": 1}
+    assert stage["counts"] == {"pass": 10, "warn": 1, "severe": 1, "blocked": 0}
     assert {row["id"] for row in stage["rows"]} == {axis["id"] for axis in dirty_result["axles"]["axes"]}
 
 
 def test_no_axes_produces_zero_grade_counts():
-    assert balance([]) == {"rows": [], "counts": {"pass": 0, "warn": 0, "severe": 0}}
+    assert balance([]) == {"rows": [], "counts": {"pass": 0, "warn": 0, "severe": 0, "blocked": 0}}

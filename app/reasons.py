@@ -25,6 +25,8 @@ REASONS = {
     "BOUNCE": "同轮道触发抖动",
     "PAIR_MISSING": "对侧轮道无候选",
     "PAIR_AMBIGUOUS": "对侧轮道有歧义",
+    "PAIR_CONTENDED": "同车争配未决，整车证据无唯一最优",
+    "AXLE_CONTENDED": "车轴争配挂起，差额再小也不得核平",
     "SPACING_SHORT": "轴距小于下限",
     "SPACING_LONG": "轴距大于上限",
     "TICKET_INVALID": "车次含无效磅单",

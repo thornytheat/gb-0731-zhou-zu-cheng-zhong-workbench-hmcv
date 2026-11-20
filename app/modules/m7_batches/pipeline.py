@@ -6,7 +6,24 @@ from app.modules.m3_debounce.service import debounce
 from app.modules.m4_axles.service import reconstruct
 from app.modules.m5_balance.service import balance
 from app.modules.m6_reconcile.service import reconcile
+from app.modules.m6_reconcile.tickets import choose, ticket_book
 from app.reasons import REASONS
+
+
+def ticket_weights(source, passes):
+    """预读磅单，取每车次最新有效版次总重作为争配裁决的整车证据。
+
+    无磅单、版次冲突或磅单无效时返回 None，按缺证处理，不参与争配择优。
+    """
+    if source is None:
+        return {}
+    book, _ = ticket_book(source, passes)
+    weights = {}
+    for pass_id, tickets in book.items():
+        ticket, code, _ = choose(tickets)
+        if ticket is not None and code is None:
+            weights[pass_id] = ticket.kg
+    return weights
 
 
 def run_pipeline(sources, until="reconcile", events=None):
@@ -28,14 +45,20 @@ def run_pipeline(sources, until="reconcile", events=None):
     log("info", "DEBOUNCE", f"保留 {len(pulse['kept'])} 条 · 重复 {len(pulse['duplicates'])} 条")
     if until == "debounce":
         return wire(results)
-    axles = results["axles"] = reconstruct(pulse["kept"], cal["passes"])
+    weights = ticket_weights(sources.get("tickets"), cal["passes"])
+    axles = results["axles"] = reconstruct(pulse["kept"], cal["passes"], weights)
     for axis in axles["axes"]:
         left, right = (axis[side].trigger for side in ("left", "right"))
-        log("ok", "AXLE", f"{axis['id']} · {left.id} / {right.id} · {axis['total_kg']} kg", axis["time"])
+        mark = "挂起" if axis.get("contended") else ""
+        log("ok", "AXLE", f"{axis['id']} · {left.id} / {right.id} · {axis['total_kg']} kg {mark}", axis["time"])
     if until == "axles":
         return wire(results)
     grades = results["balance"] = balance(axles["axes"])
-    log("info", "BALANCE", f"偏载 {grades['counts']['warn']} 轴 · 严重 {grades['counts']['severe']} 轴")
+    blocked = grades["counts"].get("blocked", 0)
+    log(
+        "info", "BALANCE",
+        f"偏载 {grades['counts']['warn']} 轴 · 严重 {grades['counts']['severe']} 轴 · 争配挂起 {blocked} 轴",
+    )
     if until == "balance":
         return wire(results)
     isolated = sorted(

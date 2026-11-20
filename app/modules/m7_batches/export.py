@@ -51,9 +51,10 @@ def axle_rows(results):
     for axis in results["axles"]["axes"]:
         left, right = axis["left"], axis["right"]
         grade = grades[axis["id"]]
-        level = {"pass": "正常", "warn": "偏载", "severe": "严重"}[grade["level"]]
+        level = {"pass": "正常", "warn": "偏载", "severe": "严重", "blocked": "争配挂起"}[grade["level"]]
         yield (safe_cell(axis["id"]), safe_cell(axis["group"]), axis["time"], axis["gap_m"], axis["skew_ms"],
-               left["kg"], right["kg"], axis["total_kg"], grade["percent"], level,
+               left["kg"], right["kg"], axis["total_kg"],
+               grade["percent"] if grade["percent"] is not None else "", level,
                left["trigger"]["source"]["ref"], right["trigger"]["source"]["ref"], left["cert_ref"], right["cert_ref"])
 
 

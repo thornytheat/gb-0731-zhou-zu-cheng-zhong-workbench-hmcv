@@ -11,7 +11,8 @@ def row_for(result, key):
 
 def test_ledger_partitions_source_lines_without_overlap(dirty_result):
     data = dirty_result["reconcile"]["ledger"]
-    assert (data["raw"], data["effective"], data["duplicates"], data["isolated"], data["balanced"]) == (50, 22, 3, 25, True)
+    # 整车争配解析为 0019 找回第二条车轴（24 条有效轮载），隔离相应降到 23，账仍守恒。
+    assert (data["raw"], data["effective"], data["duplicates"], data["isolated"], data["balanced"]) == (50, 24, 3, 23, True)
     accepted = [item[side]["trigger"]["source"]["line"] for item in dirty_result["axles"]["axes"] for side in ("left", "right")]
     discarded = [item["source"]["line"] for item in dirty_result["quarantine"] + dirty_result["debounce"]["duplicates"]]
     assert sorted(accepted + discarded) == [line for line in range(2, 55) if line not in (4, 12, 13)]
@@ -21,7 +22,7 @@ def test_ledger_partitions_source_lines_without_overlap(dirty_result):
 def test_decimal_rollup_matches_independently_summed_axles(dirty_result):
     expected = sum(Decimal(axis["total_kg"]) for axis in dirty_result["axles"]["axes"])
     actual = dirty_result["reconcile"]["ledger"]["wheel_kg"]
-    assert Decimal(actual) == expected == Decimal("49590.01")
+    assert Decimal(actual) == expected == Decimal("54490.01")
 
 
 # TRAP-08
@@ -37,9 +38,11 @@ def test_latest_semantic_duplicate_and_inclusive_tolerance(dirty_result):
 
 def test_latest_conflicting_revision_never_falls_back(dirty_result):
     row = row_for(dirty_result, "0019")
+    # 争配由整车证据解决为两轴，但落选的 0019-2L 仍属缺证隔离；磅单版次冲突独立挂账。
     assert row["codes"] == ["TICKET_CONFLICT", "WHEELS_INCOMPLETE"]
     assert row["ticket_refs"] == ["dirty-tickets.csv:6", "dirty-tickets.csv:8"]
     assert row["difference_kg"] is None
+    assert row["review_refs"] == ["dirty-triggers.csv:29"]
 
 
 def test_no_weight_variance_does_not_clear_missing_wheel_evidence(dirty_result):

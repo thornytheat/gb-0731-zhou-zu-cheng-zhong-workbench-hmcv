@@ -30,7 +30,7 @@ python -m uvicorn app.main:app --host 127.0.0.1 --port 18420
 
 `GET /api/intake`、`/api/calibration`、`/api/debounce`、`/api/axles`、`/api/balance`、`/api/reconcile` 均支持 `sample=dirty` 或 `sample=clean`，也可传 `run_id` 读取归档。`POST /api/batches` 接收 `{"sample":"dirty"}`，`GET /api/batches` 列出归档。批次号下的 `/rerun` 和 `/export` 分别用于重算与下载。
 
-定义在 [数据字典](docs/DATA-DICTIONARY.md)，模块与样例断言在 [深度登记](docs/DEPTH.md)。样例按文件做有界分析，轴距按车次档案恒速估计。
+定义在 [数据字典](docs/DATA-DICTIONARY.md)，模块与样例断言在 [深度登记](docs/DEPTH.md)，争配（同车多轮争同一对侧轮载）的整车证据取舍见 [争配裁决规则](docs/CONTENTION.md)。样例按文件做有界分析，轴距按车次档案恒速估计。
 
 ```sh
 docker compose exec -T app pytest -q
